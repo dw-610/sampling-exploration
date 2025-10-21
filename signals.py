@@ -81,7 +81,7 @@ class Signal:
         S = np.fft.fft(self.signal)
         self.transform = np.fft.fftshift(S) if shift else S
 
-        w = np.linspace(-np.pi, np.pi, len(self.transform))
+        w = np.linspace(-np.pi, np.pi, len(self.transform), endpoint=False)
         self.f_axis = w * self.fs / 2 / np.pi
 
     def plot_fft(self, ax: Optional[plt.Axes] = None, shift: bool = True,
@@ -137,10 +137,9 @@ class Signal:
         self.t_axis = self.t_axis[::factor]
         self.fs = int(self.fs / factor)
 
-        # Transform (if present) is now invalid, clear it
-        if self.f_axis or self.transform:
-            self.f_axis = None
-            self.transform = None
+        # Transform is now invalid, clear it
+        self.f_axis = None
+        self.transform = None
 
     def __len__(self):
         """
