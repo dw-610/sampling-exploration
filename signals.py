@@ -8,10 +8,11 @@ continuous-time signals (implemented as high-resolution discrete signals).
 # -----------------------------------------------------------------------------
 # imports
 
+from typing import Optional
 import numpy as np
 import matplotlib.pyplot as plt
-from typing import Optional
-from plotting import plot_time_domain, setup_time_domain_axes, add_period_markers
+from plotting import (plot_time_domain, add_period_markers, 
+                      plot_frequency_domain)
 
 # -----------------------------------------------------------------------------
 # Base Signal Class
@@ -29,10 +30,12 @@ class Signal:
     """
 
     def __init__(self):
-        self.t = None
+        self.t_axis = None
         self.signal = None
         self.fs = None
         self.duration = None
+        self.transform = None
+        self.f_axis = None
 
     def plot(self, ax: Optional[plt.Axes] = None, show_samples: bool = False,
              show_grid: bool = True, **kwargs) -> plt.Axes:
@@ -51,16 +54,93 @@ class Signal:
         Raises:
             ValueError: If signal has not been initialized.
         """
-        if self.t is None or self.signal is None:
+        if self.t_axis is None or self.signal is None:
             raise ValueError("Signal not initialized")
 
-        ax = plot_time_domain(self.t, self.signal, ax=ax,
+        ax = plot_time_domain(self.t_axis, self.signal, ax=ax,
                              show_samples=show_samples, **kwargs)
 
         if not show_grid:
             ax.grid(False)
 
         return ax
+    
+    def _get_fft(self, shift = True):
+        """
+        Computes the discrete Fourier transform of the signal.
+
+        Args:
+            shift: uses fftshift to center the transform if True.
+
+        Raises:
+            ValueError: If signal has not been initialized.
+        """
+        if self.t_axis is None or self.signal is None:
+            raise ValueError("Signal not initialized")
+
+        S = np.fft.fft(self.signal)
+        self.transform = np.fft.fftshift(S) if shift else S
+
+        w = np.linspace(-np.pi, np.pi, len(self.transform))
+        self.f_axis = w * self.fs / 2 / np.pi
+
+    def plot_fft(self, ax: Optional[plt.Axes] = None, shift: bool = True,
+                 show_magnitude: bool = True, show_grid: bool = True,
+                 **kwargs) -> plt.Axes:
+        """
+        Plot the signal in frequency domain (FFT).
+
+        Args:
+            ax: Matplotlib axes object. If None, creates new axes.
+            shift: If True, use fftshift to center the transform.
+            show_magnitude: If True, plot magnitude; otherwise plot real part.
+            show_grid: If True, show grid lines.
+            **kwargs: Additional keyword arguments passed to plotting functions.
+
+        Returns:
+            Matplotlib axes object containing the plot.
+
+        Raises:
+            ValueError: If signal has not been initialized.
+        """
+        if self.t_axis is None or self.signal is None:
+            raise ValueError("Signal not initialized")
+
+        # Compute FFT
+        self._get_fft(shift=shift)
+
+        ax = plot_frequency_domain(self.f_axis, self.transform, ax=ax,
+                                   show_magnitude=show_magnitude, **kwargs)
+
+        if not show_grid:
+            ax.grid(False)
+
+        return ax
+    
+    def decimate(self, factor: int = 1):
+        """
+        Reduces the sampling rate of the signal by factor.
+
+        Args:
+            factor: Decimation factor, must be a divisor of self.fs.
+
+        Raises:
+            ValueError: If signal has not been initiated.
+            ValueError: If factor is not a divisor of self.fs.
+        """
+        if self.t_axis is None or self.signal is None:
+            raise ValueError("Signal not initialized")
+        if self.fs % factor != 0:
+            raise ValueError("Decimation factor not a divisor of f_s")
+
+        self.signal = self.signal[::factor]
+        self.t_axis = self.t_axis[::factor]
+        self.fs = int(self.fs / factor)
+
+        # Transform (if present) is now invalid, clear it
+        if self.f_axis or self.transform:
+            self.f_axis = None
+            self.transform = None
 
     def __len__(self):
         """
@@ -121,11 +201,11 @@ class Sinusoid(Signal):
         self.duration = signal_length
         num_samples = int(signal_length * self.fs)
 
-        self.t = np.linspace(0, signal_length, num_samples, endpoint=False)
-        self.signal = np.cos(2 * np.pi * self.freq * self.t)
+        self.t_axis = np.linspace(0, signal_length, num_samples, endpoint=False)
+        self.signal = np.cos(2 * np.pi * self.freq * self.t_axis)
 
     def plot(self, ax: Optional[plt.Axes] = None, show_samples: bool = False,
-             show_periods: bool = False, show_grid: bool = True,
+             show_grid: bool = True, show_periods: bool = False,
              **kwargs) -> plt.Axes:
         """
         Plot the sinusoid signal in time domain.
@@ -161,12 +241,18 @@ if __name__ == "__main__":
 
     frequency = 1e6
     periods = 5
-    sampling_frequency = 25 * frequency
+    sampling_frequency = 1000 * frequency
 
     s = Sinusoid(frequency, periods, sampling_frequency)
 
     # Test the new plot method
     s.plot(show_samples=True, show_periods=True)
+    s.plot_fft()
+
+    s.decimate(20)
+    s.plot(show_samples=True, show_periods=True)
+    s.plot_fft()
+
     plt.show()
 
 

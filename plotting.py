@@ -8,8 +8,9 @@ signal visualization, designed to be used across different signal types.
 # -----------------------------------------------------------------------------
 # imports
 
+from typing import Optional
 import matplotlib.pyplot as plt
-from typing import Optional, Tuple
+import numpy as np
 
 # -----------------------------------------------------------------------------
 # Time Domain Plotting
@@ -87,43 +88,62 @@ def add_period_markers(ax: plt.Axes, period: float, num_periods: int,
 
 
 # -----------------------------------------------------------------------------
-# Frequency Domain Plotting (Placeholder)
+# Frequency Domain Plotting
 
 
-def setup_frequency_domain_axes(ax: Optional[plt.Axes] = None) -> plt.Axes:
+def setup_frequency_domain_axes(ax: Optional[plt.Axes] = None,
+                                title: str = "Frequency Domain",
+                                xlabel: str = "Frequency (Hz)",
+                                ylabel: str = "Magnitude") -> plt.Axes:
     """
-    Placeholder for frequency domain plotting setup.
+    Configure axes for frequency-domain plotting with consistent styling.
 
     Args:
-        ax: Matplotlib axes object. If None, creates new axes.
+        ax: Matplotlib axes object. If None, creates a new figure and axes.
+        title: Plot title.
+        xlabel: Label for x-axis.
+        ylabel: Label for y-axis.
 
     Returns:
         Configured matplotlib axes object.
-
-    Raises:
-        NotImplementedError: This function is not yet implemented.
     """
-    raise NotImplementedError("Frequency domain plotting not yet implemented")
+    if ax is None:
+        fig, ax = plt.subplots(figsize=(10, 4))
+
+    ax.set_xlabel(xlabel)
+    ax.set_ylabel(ylabel)
+    ax.set_title(title)
+    ax.grid(True, alpha=0.3)
+
+    return ax
 
 
-def plot_frequency_domain(frequencies, magnitude, ax: Optional[plt.Axes] = None,
+def plot_frequency_domain(frequencies, spectrum, ax: Optional[plt.Axes] = None,
+                         show_magnitude: bool = True,
                          **kwargs) -> plt.Axes:
     """
-    Placeholder for frequency domain plotting.
+    Plot a frequency-domain representation of a signal.
 
     Args:
-        frequencies: Frequency array.
-        magnitude: Magnitude values.
+        frequencies: Frequency array (numpy array or list).
+        spectrum: Complex spectrum values (numpy array or list).
         ax: Matplotlib axes object. If None, creates new axes.
-        **kwargs: Additional keyword arguments.
+        show_magnitude: If True, plot magnitude; otherwise plot real part.
+        **kwargs: Additional keyword arguments passed to plt.plot().
 
     Returns:
         Matplotlib axes object containing the plot.
-
-    Raises:
-        NotImplementedError: This function is not yet implemented.
     """
-    raise NotImplementedError("Frequency domain plotting not yet implemented")
+    if ax is None:
+        ylabel = "Magnitude" if show_magnitude else "Real Part"
+        ax = setup_frequency_domain_axes(ylabel=ylabel)
+
+    if show_magnitude:
+        ax.plot(frequencies, np.abs(spectrum), **kwargs)
+    else:
+        ax.plot(frequencies, np.real(spectrum), **kwargs)
+
+    return ax
 
 
 # -----------------------------------------------------------------------------
