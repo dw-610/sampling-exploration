@@ -120,6 +120,7 @@ def setup_frequency_domain_axes(ax: Optional[plt.Axes] = None,
 
 def plot_frequency_domain(frequencies, spectrum, ax: Optional[plt.Axes] = None,
                          show_magnitude: bool = True,
+                         magnitude_db: bool = False,
                          **kwargs) -> plt.Axes:
     """
     Plot a frequency-domain representation of a signal.
@@ -129,17 +130,31 @@ def plot_frequency_domain(frequencies, spectrum, ax: Optional[plt.Axes] = None,
         spectrum: Complex spectrum values (numpy array or list).
         ax: Matplotlib axes object. If None, creates new axes.
         show_magnitude: If True, plot magnitude; otherwise plot real part.
+        magnitude_db: If True, plot magnitude in dB (20*log10). Only applies when show_magnitude=True.
         **kwargs: Additional keyword arguments passed to plt.plot().
 
     Returns:
         Matplotlib axes object containing the plot.
     """
     if ax is None:
-        ylabel = "Magnitude" if show_magnitude else "Real Part"
+        if show_magnitude and magnitude_db:
+            ylabel = "Magnitude (dB)"
+        elif show_magnitude:
+            ylabel = "Magnitude"
+        else:
+            ylabel = "Real Part"
         ax = setup_frequency_domain_axes(ylabel=ylabel)
 
     if show_magnitude:
-        ax.plot(frequencies, np.abs(spectrum), **kwargs)
+        if magnitude_db:
+            # Convert to dB scale, adding small epsilon to avoid log(0)
+            magnitude = np.abs(spectrum)
+            magnitude_db_values = 20 * np.log10(magnitude + 1e-10)
+            # Clip to reasonable minimum to avoid extremely low values
+            magnitude_db_values = np.clip(magnitude_db_values, -80, None)
+            ax.plot(frequencies, magnitude_db_values, **kwargs)
+        else:
+            ax.plot(frequencies, np.abs(spectrum), **kwargs)
     else:
         ax.plot(frequencies, np.real(spectrum), **kwargs)
 
