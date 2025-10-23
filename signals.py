@@ -431,23 +431,100 @@ class Chirp(Signal):
         return ax
 
 
+class Triangle(Signal):
+    """
+    Triangle wave signal.
+
+    Generates a triangle wave at a specified frequency.
+
+    Attributes:
+        freq: Signal frequency in Hz.
+        period: Signal period in seconds (1/freq).
+        num_periods: Number of periods in the signal.
+        All attributes from Signal base class.
+    """
+
+    def __init__(self, freq: float, num_periods: float,
+                 sampling_freq: Optional[int] = None):
+        """
+        Initialize a Triangle object (triangle wave).
+
+        Args:
+            freq: Signal frequency in Hz.
+            num_periods: Number of periods to generate (sets signal length).
+            sampling_freq: Sampling frequency in Hz. If None, defaults to 100*freq.
+        """
+        super().__init__()
+
+        self.freq = freq
+        self.period = 1/freq
+        self.num_periods = num_periods
+        self.fs = sampling_freq if sampling_freq else 100 * self.freq
+
+        signal_length = num_periods * self.period
+        self.duration = signal_length
+        num_samples = int(signal_length * self.fs)
+
+        self.t_axis = np.linspace(0, signal_length, num_samples, endpoint=False)
+        self.signal = (
+            (4 / self.period) * 
+            np.abs((self.t_axis % self.period) - self.period / 2) - 1
+        )
+
+
+class Sawtooth(Signal):
+    """
+    Sawtooth wave signal.
+
+    Generates a sawtooth wave at a specified frequency.
+
+    Attributes:
+        freq: Signal frequency in Hz.
+        period: Signal period in seconds (1/freq).
+        num_periods: Number of periods in the signal.
+        All attributes from Signal base class.
+    """
+
+    def __init__(self, freq: float, num_periods: float,
+                 sampling_freq: Optional[int] = None):
+        """
+        Initialize a Sawtooth object (sawtooth wave).
+
+        Args:
+            freq: Signal frequency in Hz.
+            num_periods: Number of periods to generate (sets signal length).
+            sampling_freq: Sampling frequency in Hz. If None, defaults to 100*freq.
+        """
+        super().__init__()
+
+        self.freq = freq
+        self.period = 1/freq
+        self.num_periods = num_periods
+        self.fs = sampling_freq if sampling_freq else 100 * self.freq
+
+        signal_length = num_periods * self.period
+        self.duration = signal_length
+        num_samples = int(signal_length * self.fs)
+
+        self.t_axis = np.linspace(0, signal_length, num_samples, endpoint=False)
+        self.signal = (self.t_axis % self.period) / self.period * 2 - 1
+
+
 # -----------------------------------------------------------------------------
 
 
 if __name__ == "__main__":
 
-    f0 = 10e6  # Start frequency: 10 MHz
-    f1 = 100e6  # End frequency: 100 MHz
-    duration = 10e-6  # 10 microseconds
-    sampling_frequency = 1e9  # 2 GHz sampling
-    decimation_factor = 25
+    frequency = 1e6
+    num_periods = 25
+    sampling_freq = 100 * frequency
+    decimation_factor = 21
 
-    s = Chirp(f1, f0, duration, sampling_frequency)
+    # Create a triangle wave at 5 Hz with 3 periods
+    saw = Sawtooth(frequency, num_periods, sampling_freq)
 
-    # Plot before/after decimation in a 2x2 grid
-    s.decimate_and_compare(decimation_factor, freq_magnitude_db=True,
-                           match_freq_xlim=False)
-
+    # Plot the decimation effect
+    saw.decimate_and_compare(decimation_factor, show_samples=False)
     plt.show()
 
 
