@@ -11,7 +11,8 @@ continuous-time signals (implemented as high-resolution discrete signals).
 from typing import Optional
 import numpy as np
 import matplotlib.pyplot as plt
-from plotting import (plot_time_domain, add_period_markers, 
+from matplotlib.ticker import FuncFormatter
+from plotting import (plot_time_domain, add_period_markers,
                       plot_frequency_domain)
 
 # -----------------------------------------------------------------------------
@@ -78,7 +79,8 @@ class Signal:
         if self.t_axis is None or self.signal is None:
             raise ValueError("Signal not initialized")
 
-        S = np.fft.fft(self.signal)
+        # Compute FFT and normalize by signal length
+        S = np.fft.fft(self.signal) / len(self.signal)
         self.transform = np.fft.fftshift(S) if shift else S
 
         w = np.linspace(-np.pi, np.pi, len(self.transform), endpoint=False)
@@ -144,7 +146,8 @@ class Signal:
                           show_samples: bool = True,
                           freq_magnitude_db: bool = False,
                           match_freq_xlim: bool = False,
-                          figsize: tuple = (12, 8)) -> plt.Figure:
+                          figsize: tuple = (12, 8),
+                          fig: Optional[plt.Figure] = None) -> plt.Figure:
         """
         Plot before/after decimation comparison in a 2x2 grid, then decimate.
 
@@ -162,14 +165,24 @@ class Signal:
             freq_magnitude_db: If True, plot frequency domain magnitude in dB.
             match_freq_xlim: If True, set top freq plot x-axis to match bottom (decimated) range.
             figsize: Figure size tuple (width, height).
+            fig: Optional existing figure to reuse. If None, creates new figure.
 
         Returns:
             Matplotlib figure object.
         """
-        # Create subplot grid
-        fig, ((ax1, ax2), (ax3, ax4)) = plt.subplots(2, 2, figsize=figsize)
+        # Create subplot grid or reuse existing figure
+        if fig is None:
+            fig, ((ax1, ax2), (ax3, ax4)) = plt.subplots(2, 2, figsize=figsize)
+        else:
+            # Reuse existing figure - get and clear axes
+            axes = fig.get_axes()
+            if len(axes) != 4:
+                raise ValueError("Provided figure must have exactly 4 axes (2x2 grid)")
+            ax1, ax2, ax3, ax4 = axes
+            for ax in axes:
+                ax.clear()
 
-        # Plot original
+        # Plot original (blue - default color)
         self.plot(ax=ax1, show_samples=show_samples)
         ax1.set_title(f"Original Time Domain (fs={self.fs:.2e} Hz)")
         ax1.set_ylabel("Amplitude")
@@ -177,18 +190,51 @@ class Signal:
         self.plot_fft(ax=ax2, magnitude_db=freq_magnitude_db)
         ax2.set_title("Original Frequency Domain")
 
+        # Store the original frequency domain y-limits for consistency
+        original_freq_ylim = ax2.get_ylim()
+
         # Apply decimation
         self.decimate(decimation_factor)
 
-        # Plot decimated
-        self.plot(ax=ax3, show_samples=show_samples)
-        ax3.set_title(f"Decimated Time Domain (fs={self.fs:.2e} Hz)")
+        # Plot decimated (red)
+        self.plot(ax=ax3, show_samples=show_samples, color='red')
+        ax3.set_title(f"Decimated Time Domain (factor={decimation_factor}, fs={self.fs:.2e} Hz)")
         ax3.set_xlabel("Time (s)")
         ax3.set_ylabel("Amplitude")
 
-        self.plot_fft(ax=ax4, magnitude_db=freq_magnitude_db)
-        ax4.set_title("Decimated Frequency Domain")
+        self.plot_fft(ax=ax4, magnitude_db=freq_magnitude_db, color='red')
+        ax4.set_title(f"Decimated Frequency Domain (factor={decimation_factor})")
         ax4.set_xlabel("Frequency (Hz)")
+
+        # Format frequency axes with MHz/kHz suffixes
+        def freq_formatter(x, pos):
+            """Format frequency labels with appropriate units."""
+            if abs(x) >= 1e6:
+                return f'{x/1e6:.1f}M'
+            elif abs(x) >= 1e3:
+                return f'{x/1e3:.1f}k'
+            else:
+                return f'{x:.1f}'
+
+        ax2.xaxis.set_major_formatter(FuncFormatter(freq_formatter))
+        ax4.xaxis.set_major_formatter(FuncFormatter(freq_formatter))
+
+        # Set y-axis limits: use original limits, but expand if decimated exceeds them
+        # If reusing figure, preserve the maximum y-limit seen so far
+        decimated_freq_ylim = ax4.get_ylim()
+
+        # Check if ax4 has a stored maximum (from previous calls when reusing figure)
+        if hasattr(ax4, '_freq_ylim_max'):
+            current_max = ax4._freq_ylim_max
+        else:
+            current_max = original_freq_ylim[1]
+
+        # Update maximum if needed
+        new_max = max(current_max, decimated_freq_ylim[1])
+        ax4._freq_ylim_max = new_max
+
+        final_ylim = (original_freq_ylim[0], new_max)
+        ax4.set_ylim(final_ylim)
 
         # Match frequency x-axis limits if requested, or show span markers
         if match_freq_xlim:
@@ -317,14 +363,14 @@ class Square(Signal):
         Args:
             freq: Signal frequency in Hz.
             num_periods: Number of periods to generate (sets signal length).
-            sampling_freq: Sampling frequency in Hz. If None, defaults to 100*freq.
+            sampling_freq: Sampling frequency in Hz. If None, defaults to 200*freq.
         """
         super().__init__()
 
         self.freq = freq
         self.period = 1/freq
         self.num_periods = num_periods
-        self.fs = sampling_freq if sampling_freq else 100 * self.freq
+        self.fs = sampling_freq if sampling_freq else 200 * self.freq
 
         signal_length = num_periods * self.period
         self.duration = signal_length
@@ -518,10 +564,10 @@ if __name__ == "__main__":
     frequency = 1e6
     num_periods = 25
     sampling_freq = 100 * frequency
-    decimation_factor = 21
+    decimation_factor = 15
 
     # Create a triangle wave at 5 Hz with 3 periods
-    saw = Sawtooth(frequency, num_periods, sampling_freq)
+    saw = Square(frequency, num_periods, sampling_freq)
 
     # Plot the decimation effect
     saw.decimate_and_compare(decimation_factor, show_samples=False)
