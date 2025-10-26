@@ -35,7 +35,7 @@ plt.show()
 
 ## Predefined Aliasing Examples
 
-The `examples.py` script showcases aliasing effects with expert-designed parameters for each signal type:
+The `examples.py` script showcases aliasing effects with pre-set parameters for each signal type:
 
 ```bash
 python examples.py
@@ -151,7 +151,6 @@ plt.show()
 signals.py              # Signal classes and core methods
 plotting.py             # Visualization utilities
 animate_decimation.py   # Animation framework
-examples.py             # Predefined aliasing examples for each signal type
 requirements.txt        # Dependencies
 ```
 
