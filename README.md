@@ -98,6 +98,12 @@ plt.show()
 animator.save('decimation.gif', fps=5)
 ```
 
+### Decimation in Action
+
+![Decimation Animation](decimation.gif)
+
+*Progressive decimation showing how aliasing artifacts emerge as sampling rate decreases.*
+
 Configure animation parameters in `animate_decimation.py` at the top of `main()`.
 
 ## Core Methods
