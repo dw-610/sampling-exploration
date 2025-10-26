@@ -33,6 +33,32 @@ sig.decimate_and_compare(decimation_factor=15)
 plt.show()
 ```
 
+## Predefined Aliasing Examples
+
+The `examples.py` script showcases aliasing effects with expert-designed parameters for each signal type:
+
+```bash
+python examples.py
+```
+
+Change the `SIGNAL_TYPE` variable at the top of `examples.py` to select which example to run:
+
+```python
+SIGNAL_TYPE = "sinusoid"  # Options: "sinusoid", "square", "triangle", "sawtooth", "chirp"
+```
+
+Each example demonstrates aliasing with:
+- **Original signal** sampled at a safe rate (no aliasing)
+- **Decimated signal** that violates Nyquist theorem
+- **Side-by-side comparison** in time and frequency domains
+
+Included examples:
+- **Sinusoid**: Clean single-frequency aliasing (1 kHz → 667 Hz)
+- **Square**: Multiple harmonic aliases with visible rounding
+- **Triangle**: Moderate aliasing with smooth decay
+- **Sawtooth**: Maximum spectral clutter from all harmonics
+- **Chirp**: Time-varying aliasing showing frequency reversal at Nyquist boundary
+
 ## Signal Types
 
 All signals use `(freq, num_periods, sampling_freq)` except Chirp:
@@ -125,6 +151,7 @@ plt.show()
 signals.py              # Signal classes and core methods
 plotting.py             # Visualization utilities
 animate_decimation.py   # Animation framework
+examples.py             # Predefined aliasing examples for each signal type
 requirements.txt        # Dependencies
 ```
 
